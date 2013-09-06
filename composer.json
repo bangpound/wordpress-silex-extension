@@ -1,0 +1,17 @@
+{
+    "name": "bangpound/wordpress-provider",
+    "description": "WordPress provider for Silex",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Benjamin Doherty",
+            "email": "bjd@bangpound.org"
+        }
+    ],
+    "autoload": {
+        "classmap": [ "WordpressServiceProvider.php" ]
+    },
+    "require": {
+
+    }
+}
