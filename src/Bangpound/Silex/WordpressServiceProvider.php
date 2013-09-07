@@ -1,3 +1,5 @@
+<?php
+
 namespace Bangpound\Silex;
 
 use Silex\ServiceProviderInterface;

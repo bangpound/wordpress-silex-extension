@@ -9,7 +9,9 @@
         }
     ],
     "autoload": {
-        "classmap": [ "WordpressServiceProvider.php" ]
+        "psr-0": {
+            "Bangpound\\Silex\\": "src/"
+        }
     },
     "require": {
 
