@@ -3,7 +3,6 @@
 namespace Bangpound\Silex\Security;
 
 use Psr\Log\LoggerInterface;
-use Symfony\Component\BrowserKit\CookieJar;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\Security\Http\Firewall\ListenerInterface;
@@ -97,8 +96,6 @@ class WordpressListener implements ListenerInterface
 
             return;
         } catch (AuthenticationException $failed) {
-            // ... you might log something here
-
             // To deny the authentication clear the token. This will redirect to the login page.
             // Make sure to only clear your token, not those of other authentication listeners.
             $token = $this->securityContext->getToken();
