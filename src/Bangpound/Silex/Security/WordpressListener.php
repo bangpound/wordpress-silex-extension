@@ -18,7 +18,7 @@ class WordpressListener implements ListenerInterface
     protected $documentRoot;
     protected $logger;
 
-    public function __construct(SecurityContextInterface $securityContext, AuthenticationManagerInterface $authenticationManager, $documentRoot, LoggerInterface $logger)
+    public function __construct(SecurityContextInterface $securityContext, AuthenticationManagerInterface $authenticationManager, $documentRoot, LoggerInterface $logger = null)
     {
         $this->securityContext = $securityContext;
         $this->authenticationManager = $authenticationManager;
@@ -48,16 +48,22 @@ class WordpressListener implements ListenerInterface
             return;
         }
 
-        $this->logger->info('Found eligible cookies');
+        if (null !== $this->logger) {
+            $this->logger->debug('Found eligible cookies prefixed with wordpress_logged_in_');
+        }
 
         $wordpress = function ($cookies) use ($logger) {
             $globals_keys = array_keys($GLOBALS);
             chdir($this->documentRoot);
             include './wp-load.php';
             if (isset($cookies[LOGGED_IN_COOKIE])) {
-                $logger->info(sprintf('Wordpress: %s = %s', LOGGED_IN_COOKIE, $cookies[LOGGED_IN_COOKIE]));
+                if (null !== $logger) {
+                    $logger->debug(sprintf('Wordpress: %s=%s;', LOGGED_IN_COOKIE, $cookies[LOGGED_IN_COOKIE]));
+                }
                 $user_id = wp_validate_auth_cookie($cookies[LOGGED_IN_COOKIE], 'logged_in');
-                $logger->info(sprintf('Wordpress: User ID %s', $user_id));
+                if (null !== $logger) {
+                    $logger->debug(sprintf('Wordpress: User ID %s', $user_id));
+                }
                 if ($user_id) {
                     $user = get_userdata($user_id);
                 }
@@ -66,7 +72,9 @@ class WordpressListener implements ListenerInterface
                 unset($GLOBALS[$key]);
             }
             if ($user) {
-                $logger->info(sprintf('Wordpress: Username %s', $user->data->display_name));
+                if (null !== $logger) {
+                    $logger->debug(sprintf('Wordpress: Username %s', $user->data->display_name));
+                }
                 return $user;
             }
         };
