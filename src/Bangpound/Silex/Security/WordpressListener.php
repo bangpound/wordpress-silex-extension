@@ -62,6 +62,7 @@ class WordpressListener implements ListenerInterface
 
             // Bootstrap WordPress similarly to xmlrpc.php. Disable cron.
             chdir($this->documentRoot);
+            define('DISABLE_WP_CRON', true);
             include './wp-load.php';
 
             // LOGGED_IN_COOKIE is defined in wp-includes/default-constants.php
