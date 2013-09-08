@@ -58,6 +58,7 @@ class WordpressListener implements ListenerInterface
             // WordPress creates many global variables. This function attempts to clean up the namespace. Constants
             // cannot be removed.
             $globals_keys = array_keys($GLOBALS);
+            $cwd = getcwd();
 
             // Bootstrap WordPress similarly to xmlrpc.php. Disable cron.
             chdir($this->documentRoot);
@@ -81,6 +82,8 @@ class WordpressListener implements ListenerInterface
             foreach (array_diff(array_keys($GLOBALS), $globals_keys) as $key) {
                 unset($GLOBALS[$key]);
             }
+            chdir($cwd);
+
             if ($user) {
                 if (null !== $logger) {
                     $logger->debug(sprintf('Wordpress: Username %s', $user->data->display_name));
