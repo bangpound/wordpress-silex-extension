@@ -51,10 +51,19 @@ class WordpressListener implements ListenerInterface
             $this->logger->debug('Found eligible cookies prefixed with wordpress_logged_in_');
         }
 
+        // Since the closure doesn't keep Wordpress global variables from creeping into Silex's scope, this closure
+        // is probably unnecessary.
         $wordpress = function ($cookies) use ($logger) {
+
+            // WordPress creates many global variables. This function attempts to clean up the namespace. Constants
+            // cannot be removed.
             $globals_keys = array_keys($GLOBALS);
+
+            // Bootstrap WordPress similarly to xmlrpc.php. Disable cron.
             chdir($this->documentRoot);
             include './wp-load.php';
+
+            // LOGGED_IN_COOKIE is defined in wp-includes/default-constants.php
             if (isset($cookies[LOGGED_IN_COOKIE])) {
                 if (null !== $logger) {
                     $logger->debug(sprintf('Wordpress: %s=%s;', LOGGED_IN_COOKIE, $cookies[LOGGED_IN_COOKIE]));
@@ -67,6 +76,8 @@ class WordpressListener implements ListenerInterface
                     $user = get_userdata($user_id);
                 }
             }
+
+            // Remove global variables that were added by WordPress.
             foreach (array_diff(array_keys($GLOBALS), $globals_keys) as $key) {
                 unset($GLOBALS[$key]);
             }
@@ -78,19 +89,24 @@ class WordpressListener implements ListenerInterface
             }
         };
 
+        // Attempt to load a WordPress user based on cookies for this site's domain.
         $user = $wordpress($cookies);
         if (!$user) {
             return;
         }
 
+        // Translate WordPress roles into Symfony Security component roles.
         $roles = array_map(function ($input) {
             return 'ROLE_WORDPRESS_'. strtoupper($input);
         }, $user->roles);
         $roles[] = 'ROLE_USER';
+
+        // Generate token.
         $token = new WordpressUserToken($roles);
         $token->setUser($user->data->display_name);
 
         try {
+            // Authorize token.
             $authToken = $this->authenticationManager->authenticate($token);
             $this->securityContext->setToken($authToken);
 
