@@ -8,7 +8,7 @@ use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\NonceExpiredException;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
-class WordpressProvider implements AuthenticationProviderInterface
+class WordpressAuthenticationProvider implements AuthenticationProviderInterface
 {
     public function authenticate(TokenInterface $token)
     {
