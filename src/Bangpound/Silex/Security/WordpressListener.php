@@ -9,6 +9,7 @@ use Symfony\Component\Security\Http\Firewall\ListenerInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\SecurityContextInterface;
 use Symfony\Component\Security\Core\Authentication\AuthenticationManagerInterface;
+use Symfony\Component\Process\PhpProcess;
 
 class WordpressListener implements ListenerInterface
 {
@@ -51,51 +52,34 @@ class WordpressListener implements ListenerInterface
             $this->logger->debug('Found eligible cookies prefixed with wordpress_logged_in_');
         }
 
-        // Since the closure doesn't keep Wordpress global variables from creeping into Silex's scope, this closure
-        // is probably unnecessary.
-        $wordpress = function ($cookies) use ($logger) {
+        $subprocess = json_encode(array(
+            '_GET' => $request->query->all(),
+            '_POST' => $request->request->all(),
+            '_SERVER' => $request->server->all(),
+            '_COOKIE' => $request->cookies->all(),
+        ));
+        $process = new \Symfony\Component\Process\PhpProcess(<<<EOF
+<?php
+\$subprocess_globals = json_decode('$subprocess', TRUE);
+foreach (\$subprocess_globals as \$key => \$value) {
+  \$GLOBALS[\$key] = \$value;
+}
+\$wp_did_header = true;
+require_once( dirname(__FILE__) . '/wp-load.php' );
+wp();
+\$user = wp_get_current_user();
+echo json_encode(\$user);
+?>
+EOF
+        );
+        $process->setWorkingDirectory($this->documentRoot);
+        $process->run();
 
-            // WordPress creates many global variables. This function attempts to clean up the namespace. Constants
-            // cannot be removed.
-            $globals_keys = array_keys($GLOBALS);
-            $cwd = getcwd();
-
-            // Bootstrap WordPress similarly to xmlrpc.php. Disable cron.
-            chdir($this->documentRoot);
-            define('DISABLE_WP_CRON', true);
-            include './wp-load.php';
-
-            // LOGGED_IN_COOKIE is defined in wp-includes/default-constants.php
-            if (isset($cookies[LOGGED_IN_COOKIE])) {
-                if (null !== $logger) {
-                    $logger->debug(sprintf('Wordpress: %s=%s;', LOGGED_IN_COOKIE, $cookies[LOGGED_IN_COOKIE]));
-                }
-                $user_id = wp_validate_auth_cookie($cookies[LOGGED_IN_COOKIE], 'logged_in');
-                if (null !== $logger) {
-                    $logger->debug(sprintf('Wordpress: User ID %s', $user_id));
-                }
-                if ($user_id) {
-                    $user = get_userdata($user_id);
-                }
-            }
-
-            // Remove global variables that were added by WordPress.
-            foreach (array_diff(array_keys($GLOBALS), $globals_keys) as $key) {
-                unset($GLOBALS[$key]);
-            }
-            chdir($cwd);
-
-            if ($user) {
-                if (null !== $logger) {
-                    $logger->debug(sprintf('Wordpress: Username %s', $user->data->display_name));
-                }
-                return $user;
-            }
-        };
+        $output = $process->getOutput();
+        $user = json_decode($output);
 
         // Attempt to load a WordPress user based on cookies for this site's domain.
-        $user = $wordpress($cookies);
-        if (!$user) {
+        if (!$user || (isset($user->ID) && $user->ID === 0)) {
             return;
         }
 
