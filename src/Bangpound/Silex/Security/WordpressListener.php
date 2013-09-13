@@ -2,14 +2,15 @@
 
 namespace Bangpound\Silex\Security;
 
+use Bangpound\Process\InjectRequestGlobals;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
-use Symfony\Component\Security\Http\Firewall\ListenerInterface;
+use Symfony\Component\Process\PhpProcess;
+use Symfony\Component\Security\Core\Authentication\AuthenticationManagerInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\SecurityContextInterface;
-use Symfony\Component\Security\Core\Authentication\AuthenticationManagerInterface;
-use Symfony\Component\Process\PhpProcess;
+use Symfony\Component\Security\Http\Firewall\ListenerInterface;
 
 class WordpressListener implements ListenerInterface
 {
@@ -52,27 +53,11 @@ class WordpressListener implements ListenerInterface
             $this->logger->debug('Found eligible cookies prefixed with wordpress_logged_in_');
         }
 
-        $subprocess = json_encode(array(
-            '_GET' => $request->query->all(),
-            '_POST' => $request->request->all(),
-            '_SERVER' => $request->server->all(),
+        $globalz = array(
             '_COOKIE' => $request->cookies->all(),
-        ));
-        $process = new \Symfony\Component\Process\PhpProcess(<<<EOF
-<?php
-\$subprocess_globals = json_decode('$subprocess', TRUE);
-foreach (\$subprocess_globals as \$key => \$value) {
-  \$GLOBALS[\$key] = \$value;
-}
-\$wp_did_header = true;
-require_once( dirname(__FILE__) . '/wp-load.php' );
-wp();
-\$user = wp_get_current_user();
-echo json_encode(\$user);
-?>
-EOF
         );
-        $process->setWorkingDirectory($this->documentRoot);
+        $script = $app['php.wordpress36.bootstrap'](InjectRequestGlobals::toSubprocessGlobals($globalz), "\$user = wp_get_current_user(); echo json_encode(\$user);");
+        $process = new PhpProcess('<?php '. $script, $this->documentRoot);
         $process->run();
 
         $output = $process->getOutput();

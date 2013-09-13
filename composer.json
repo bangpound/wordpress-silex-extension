@@ -14,6 +14,6 @@
         }
     },
     "require": {
-      "bangpound/php-cms-bootstrap-silex-extension": "dev-master"
+        "bangpound/php-cms-bootstrap-silex-extension": "dev-master"
     }
 }
