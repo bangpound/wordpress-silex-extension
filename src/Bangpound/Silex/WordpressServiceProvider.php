@@ -19,6 +19,7 @@ class WordpressServiceProvider implements ServiceProviderInterface
                     $app['security'],
                     $app['security.authentication_manager'],
                     $options['document_root'],
+                    $app['php.wordpress36.bootstrap'],
                     $app['logger']
                 );
             });
@@ -52,7 +53,7 @@ class WordpressServiceProvider implements ServiceProviderInterface
                 'security.authentication_provider.'.$name.'.'.$provider,
                 'security.authentication_listener.'.$name.'.'.$type,
                 $entryPoint ? 'security.entry_point.'.$name.'.'.$entryPoint : null,
-                $type
+                'pre_auth'
             );
         });
     }

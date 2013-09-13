@@ -17,13 +17,15 @@ class WordpressListener implements ListenerInterface
     protected $securityContext;
     protected $authenticationManager;
     protected $documentRoot;
+    protected $script;
     protected $logger;
 
-    public function __construct(SecurityContextInterface $securityContext, AuthenticationManagerInterface $authenticationManager, $documentRoot, LoggerInterface $logger = null)
+    public function __construct(SecurityContextInterface $securityContext, AuthenticationManagerInterface $authenticationManager, $documentRoot, $script, LoggerInterface $logger = null)
     {
         $this->securityContext = $securityContext;
         $this->authenticationManager = $authenticationManager;
         $this->documentRoot = $documentRoot;
+        $this->script = $script;
         $this->logger = $logger;
     }
 
@@ -53,10 +55,7 @@ class WordpressListener implements ListenerInterface
             $this->logger->debug('Found eligible cookies prefixed with wordpress_logged_in_');
         }
 
-        $globalz = array(
-            '_COOKIE' => $request->cookies->all(),
-        );
-        $script = $app['php.wordpress36.bootstrap'](InjectRequestGlobals::toSubprocessGlobals($globalz), "\$user = wp_get_current_user(); echo json_encode(\$user);");
+        $script = call_user_func($this->script, InjectRequestGlobals::toSubprocessGlobals($request), "\$user = wp_get_current_user(); echo json_encode(\$user);");
         $process = new PhpProcess('<?php '. $script, $this->documentRoot);
         $process->run();
 
