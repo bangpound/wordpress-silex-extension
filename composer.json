@@ -1,5 +1,5 @@
 {
-    "name": "bangpound/wordpress-provider",
+    "name": "bangpound/wordpress-silex-extension",
     "description": "WordPress provider for Silex",
     "license": "MIT",
     "authors": [
